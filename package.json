@@ -1,0 +1,51 @@
+{
+  "name": "@faberjustin/mcp-for-lunchflow",
+  "version": "1.2.0",
+  "description": "Unofficial, read-only MCP server for Lunch Flow (accounts, transactions, balances). Not affiliated with or endorsed by Lunch Flow.",
+  "type": "module",
+  "bin": {
+    "mcp-for-lunchflow": "server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "npm-shrinkwrap.json"
+  ],
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "lunchflow",
+    "lunch-flow",
+    "banking",
+    "hermes-agent"
+  ],
+  "author": "Justin Faber",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/justinfaber/mcp-for-lunchflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/justinfaber/mcp-for-lunchflow/issues"
+  },
+  "homepage": "https://github.com/justinfaber/mcp-for-lunchflow#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  },
+  "mcpName": "io.github.justinfaber/mcp-for-lunchflow"
+}

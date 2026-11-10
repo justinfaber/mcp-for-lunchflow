@@ -2,7 +2,7 @@
 
 **Unofficial MCP server for Lunch Flow.** Not affiliated with, endorsed by, or supported by Lunch Flow.
 
-A small, read-only [Model Context Protocol](https://modelcontextprotocol.io) server that lets an AI agent read your bank accounts, transactions and balances through the [Lunch Flow Personal API](https://www.lunchflow.app/docs/api/personal-api-overview), using your own API key. It was built for [Hermes Agent](https://hermes-agent.nousresearch.com), but works with any MCP client that runs stdio servers.
+A small, read-only [Model Context Protocol](https://modelcontextprotocol.io) server that lets an AI agent read your bank accounts, transactions, balances and investment holdings through the [Lunch Flow Personal API](https://www.lunchflow.app/docs/api/personal-api-overview), using your own API key. It was built for [Hermes Agent](https://hermes-agent.nousresearch.com), but works with any MCP client that runs stdio servers.
 
 - One file of code (`server.mjs`); dependencies are only the official MCP SDK and zod, pinned exactly.
 - Read-only: it can only call `GET` endpoints. It cannot move money or change anything.
@@ -15,6 +15,7 @@ A small, read-only [Model Context Protocol](https://modelcontextprotocol.io) ser
 | `lunchflow_list_accounts` | Lists connected accounts (id, name, institution, provider, currency, status). |
 | `lunchflow_get_account_transactions` | Transactions for one account. Optional `from` / `to` (YYYY-MM-DD, inclusive), `include_pending`, and `limit` (default 100, max 250). Newest first. |
 | `lunchflow_get_account_balance` | Current balance for one account. |
+| `lunchflow_get_account_holdings` | Investment holdings for one account (name, ticker, ISIN/FIGI/CUSIP, quantity, price, value, cost basis), largest positions first, up to 250 (fewer if names are long). Only for accounts whose provider supports holdings: SnapTrade, MX, Finicity or Pluggy. |
 
 ## Requirements
 
@@ -27,7 +28,7 @@ A small, read-only [Model Context Protocol](https://modelcontextprotocol.io) ser
 Install a specific version globally. `--ignore-scripts` is a good habit for any package you install as root:
 
 ```bash
-npm install -g @faberjustin/mcp-for-lunchflow@1.2.0 --ignore-scripts
+npm install -g @faberjustin/mcp-for-lunchflow@1.3.0 --ignore-scripts
 ```
 
 Dependencies are locked with `npm-shrinkwrap.json`, so you get exactly the versions that were tested.
@@ -36,7 +37,7 @@ To check the release was built by this repository's GitHub Actions workflow, loo
 
 ```bash
 mkdir -p /tmp/verify && cd /tmp/verify && npm init -y >/dev/null
-npm install --ignore-scripts @faberjustin/mcp-for-lunchflow@1.2.0
+npm install --ignore-scripts @faberjustin/mcp-for-lunchflow@1.3.0
 npm audit signatures
 ```
 
@@ -103,8 +104,8 @@ What the server does:
 - **Your key stays private.** It is sent only in the `x-api-key` header to the configured API host, and never logged or returned to the model.
 - **The connection can't be weakened.** TLS is required. The server refuses to start with an invalid key, credentials in the URL, `NODE_TLS_REJECT_UNAUTHORIZED=0`, or `NODE_OPTIONS` set.
 - **Redirects are refused,** so the key is never forwarded to another host.
-- **Requests are bounded.** Each one has a hard 20-second deadline and a 5 MB response cap.
-- **Output is cleaned.** Only allowlisted fields are returned. Text from banks and third parties (merchant names, descriptions, account names) is length-capped and stripped of control, invisible and text-direction characters.
+- **Requests are bounded.** Each one has a hard 20-second deadline and a 5 MB response cap, and list results are cut to fit about 45,000 characters as Hermes measures them, so Hermes shows them in full at its default 50,000-character limit for MCP results. (Hermes lowers that limit for models with small context windows.)
+- **Output is cleaned.** Only allowlisted fields are returned. Text from banks and third parties (merchant names, descriptions, account and security names) is length-capped and stripped of control, invisible (including variation selectors, which can hide text after an emoji) and text-direction characters. Security identifiers must be plain ASCII in their exact format.
 - **Tool input is strict.** Account ids, dates and limits are validated, and unknown arguments are rejected.
 
 What it cannot do for you:

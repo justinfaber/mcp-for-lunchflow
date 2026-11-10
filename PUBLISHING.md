@@ -109,12 +109,27 @@ git push origin v1.2.0
 3. Commit, tag and push:
 
    ```bash
-   git commit -am "Release 1.2.1"
-   git tag v1.2.1
-   git push && git push origin v1.2.1
+   V=1.2.1
+   test "$(node -p 'require("./package.json").version')" = "$V" \
+     && git commit -am "Release $V" && git push && sleep 10 \
+     && id=$(gh run list --workflow ci.yml --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId -q '.[0].databaseId') \
+     && [ -n "$id" ] && gh run watch --exit-status "$id" \
+     && git tag "v$V" && git push origin "v$V"
    ```
 
+   It's one chained command, so any failed step stops everything after it. The tag is only created if `package.json` has the expected version, the commit was pushed, and CI passed on every Node version for that exact commit. (The publish workflow re-runs the tests, but only on Node 22.) If it stops at the `[ -n "$id" ]` check, CI hadn't registered yet: wait a moment and run the `id=...` part again.
+
 Use plain `vX.Y.Z` tags only. A prerelease tag like `v1.3.0-rc.1` would also trigger the workflow, and would be published as `latest` unless you add `--tag`.
+
+If the chain stops partway, don't run it again from the top. Open a new shell, set `V` again (for example `V=1.2.1`), and continue from where it stopped:
+
+| Where it stopped | What to run |
+|---|---|
+| Before `git commit` (tests or version check failed) | Fix the cause, then run the chain again. When applying a patch, undo it first with `git checkout -- .` |
+| At `git commit` | Fix the cause, then run the chain from `git commit` onward. |
+| At `git push`, an empty `id`, or a `gh` error | `git push && sleep 10 && id=$(gh run list --workflow ci.yml --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId -q '.[0].databaseId') && [ -n "$id" ] && gh run watch --exit-status "$id" && git tag "v$V" && git push origin "v$V"` |
+| CI failed | Don't tag. Fix the problem, commit it, then run the command in the row above. If the failure was a fluke: `id=$(gh run list --workflow ci.yml --commit "$(git rev-parse HEAD)" --limit 1 --json databaseId -q '.[0].databaseId') && [ -n "$id" ] && gh run rerun --failed "$id" && sleep 10 && gh run watch --exit-status "$id" && git tag "v$V" && git push origin "v$V"` |
+| The tag was created but its push failed | `git push origin "v$V"` |
 
 Then, for any release:
 
